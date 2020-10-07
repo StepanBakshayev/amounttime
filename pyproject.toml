@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "amount-time"
+version = "0.1.0"
+description = ""
+authors = ["Stepan Bakshayev"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+
+[tool.poetry.dev-dependencies]
+ipython = "^7.18.1"
+pytest = "^6.1.1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
