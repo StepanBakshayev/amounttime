@@ -1,4 +1,4 @@
-from amounttime import parse, Record
+from amounttime import parse, Record, collect_by_day
 from io import BytesIO
 import datetime
 import pytest
@@ -46,3 +46,17 @@ def test_parse():
                     <start>21-12-2011 17:59:15</start>
                 </person>
             </people>""".encode('utf-8'))))
+
+
+def test_collect_by_day():
+    records = [
+        Record(full_name='i.ivanov', start=datetime.datetime(2011, 12, 21, 8, 22, 30), end=datetime.datetime(2011, 12, 21, 18, 22, 30)),
+        Record(full_name='a.stepanova', start=datetime.datetime(2011, 12, 21, 9, 44, 30), end=datetime.datetime(2011, 12, 21, 19, 44, 30)),
+        Record(full_name='i.ivanov', start=datetime.datetime(2011, 12, 22, 8, 22, 30), end=datetime.datetime(2011, 12, 22, 18, 22, 30)),
+        Record(full_name='a.stepanova', start=datetime.datetime(2011, 12, 22, 9, 44, 30), end=datetime.datetime(2011, 12, 22, 19, 44, 30)),
+    ]
+
+    assert collect_by_day(records) == [
+        (datetime.date(2011, 12, 21), datetime.timedelta(seconds=72000)),
+        (datetime.date(2011, 12, 22), datetime.timedelta(seconds=72000))
+    ]
