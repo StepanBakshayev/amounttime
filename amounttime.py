@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from xml.etree import ElementTree
 from dataclasses import dataclass, field, fields, make_dataclass, replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from collections import defaultdict
 
 
@@ -44,20 +44,43 @@ def parse(file):
                 end = None
 
 
-def collect_by_day(records):
+def collect_by_day():
     dates = defaultdict(timedelta)
-    for record in records:
+    while True:
+        record = yield
+        if record is None:
+            break
         dates[record.start.date()] += record.end - record.start
 
-    return sorted(dates.items())
+    yield sorted(dates.items())
 
 
-def split_by_person(records):
-    pass
+def send(gen):
+    gen.send(None)
+    return gen
 
 
-def filter_dates():
-    pass
+def split_by_person(collector):
+    persons = defaultdict(lambda: send(collector()))
+    while True:
+        record = yield
+        if record is None:
+            break
+        persons[record.full_name].send(record)
+
+    yield sorted((full_name, tuple(collector.send(None))) for full_name, collector in persons.items())
+
+
+def filter_dates(start, end, collector):
+    collector = send(collector())
+    while True:
+        record = yield
+        if record is None:
+            break
+        if start <= record.start.date() <= end:
+            collector.send(record)
+
+    yield collector.send(None)
 
 
 def main():
