@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from xml.etree import ElementTree
-from dataclasses import dataclass, field, fields, make_dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime, timedelta, date
 from collections import defaultdict
 from functools import partial
