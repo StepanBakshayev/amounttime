@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, date
 from collections import defaultdict
 from functools import partial
+import pprint
 
 
 @dataclass(frozen=True)
@@ -101,8 +102,10 @@ def main(args):
         for record in parse(stream):
             collector.send(record)
 
-    import pprint
-    pprint.pprint(collector.send(None))
+    printer = pprint.pprint
+    if args.no_pretty_print:
+        printer = lambda x: print(repr(x))
+    printer(collector.send(None))
 
 
 if __name__ == '__main__':
@@ -112,6 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--split-by-person', action='store_true', help='Group time by person')
     parser.add_argument('--filter-by-interval', nargs='+', help='Use only this inverval in computation. '
         f'Format \'{DATE_FORMAT.replace("%", "%%")}..{DATE_FORMAT.replace("%", "%%")}\'')
+    parser.add_argument('--no-pretty-print', action='store_true', help='Switch off pretty print')
 
     args = parser.parse_args()
     main(args)

@@ -34,6 +34,7 @@ WORKDAY_CHANCE = 0.80
 MINIMUM_WORKERS = 0.75
 INTERVAL_SAMPLE = (0, 1, 2, 3, 4), (10, 25, 40, 15, 10) # ill, overtime, normal, bustle, reception
 WORK_HOURS = 9
+assert WORK_HOURS > max(INTERVAL_SAMPLE[0])
 START_RANGE = 8*60*60, 11*60*60
 WEEKEND = 0, 7
 
