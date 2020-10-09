@@ -34,6 +34,59 @@
     </people>
 
 
+Использование
+=============
+
+
+Развертывание
+-------------
+
+Программа требует только интерпретатор python 3.7. Можно использовать `PyPy 3.7 <https://www.pypy.org/download.html>`_.
+
+
+Запуск
+------
+
+.. code-block:: sh
+
+    $ ./amounttime.py sample.xml
+    [(datetime.date(2011, 12, 21), datetime.timedelta(seconds=61640)),
+     (datetime.date(2011, 12, 22), datetime.timedelta(seconds=61640))]
+
+    $ ./amounttime.py sample.xml --filter-by-interval '21-12-2011..21-12-2011'
+    [(datetime.date(2011, 12, 21), datetime.timedelta(seconds=61640))]
+
+    $ ./amounttime.py sample.xml --split-by-person
+    [('a.stepanova',
+      ((datetime.date(2011, 12, 21), datetime.timedelta(seconds=29945)),
+       (datetime.date(2011, 12, 22), datetime.timedelta(seconds=29945)))),
+     ('i.ivanov',
+      ((datetime.date(2011, 12, 21), datetime.timedelta(seconds=31695)),
+       (datetime.date(2011, 12, 22), datetime.timedelta(seconds=31695))))]
+
+    $ ./amounttime.py sample.xml --filter-by-interval '21-12-2011..22-12-2011' --split-by-person
+    [('a.stepanova',
+      ((datetime.date(2011, 12, 21), datetime.timedelta(seconds=29945)),
+       (datetime.date(2011, 12, 22), datetime.timedelta(seconds=29945)))),
+     ('i.ivanov',
+      ((datetime.date(2011, 12, 21), datetime.timedelta(seconds=31695)),
+       (datetime.date(2011, 12, 22), datetime.timedelta(seconds=31695))))]
+
+    $ pytest tests.py --capture=no -vv
+    ================================= test session starts ==================================
+    platform linux -- Python 3.7.4[pypy-7.3.2-alpha], pytest-6.1.1, py-1.9.0, pluggy-0.13.1 -- /home/stepan/develop/amount-time/.venv/bin/pypy3
+    cachedir: .pytest_cache
+    rootdir: /home/stepan/develop/amount-time
+    collected 4 items
+
+    tests.py::test_parse PASSED
+    tests.py::test_collect_by_day PASSED
+    tests.py::test_split_by_person PASSED
+    tests.py::test_filter_dates PASSED
+
+    ================================== 4 passed in 0.04s ===================================
+
+
 Реализация
 ==========
 
@@ -64,5 +117,3 @@
 Я ставил перед собой задачу не делать многоуровневые циклы. Был опыт: с ними тяжело.
 Результат удовлетворяет требованиям, но я не скажу, что стало как-то сильно понятнее и проще в поддержке.
 Приём: сопрограммы (coroutine) для композиции разных обработчиков данных. Pypy будет не доволен.
-
-
