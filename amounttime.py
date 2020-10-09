@@ -3,6 +3,7 @@ from xml.etree import ElementTree
 from dataclasses import dataclass, field, fields, make_dataclass, replace
 from datetime import datetime, timedelta, date
 from collections import defaultdict
+from functools import partial
 
 
 @dataclass(frozen=True)
@@ -13,9 +14,7 @@ class Record:
 
 
 def parse(file):
-    DATE_FORMAT = '%d-%m-%Y %H:%M:%S'
-    start = None
-    end = None
+    DATETIME_FORMAT = '%d-%m-%Y %H:%M:%S'
     lanes = (
         ('people',),
         ('people', 'person',),
@@ -23,6 +22,8 @@ def parse(file):
         ('people', 'person', 'end',),
     )
     lane = ()
+    start = None
+    end = None
     for (event, element) in ElementTree.iterparse(file, events=('start', 'end',)):
         if event == 'start':
             lane += element.tag,
@@ -31,9 +32,9 @@ def parse(file):
         elif event == 'end':
             lane = lane[:-1]
             if element.tag == 'start':
-                start = datetime.strptime(element.text, DATE_FORMAT)
+                start = datetime.strptime(element.text, DATETIME_FORMAT)
             elif element.tag == 'end':
-                end = datetime.strptime(element.text, DATE_FORMAT)
+                end = datetime.strptime(element.text, DATETIME_FORMAT)
             elif element.tag == 'person':
                 if not (start < end):
                     raise ValueError(f'{file!r} contains inverted time inverval. Wrong is {start}..{end}.')
@@ -55,13 +56,13 @@ def collect_by_day():
     yield sorted(dates.items())
 
 
-def send(gen):
+def kick(gen):
     gen.send(None)
     return gen
 
 
-def split_by_person(collector):
-    persons = defaultdict(lambda: send(collector()))
+def split_by_person(collector_factory):
+    persons = defaultdict(lambda: kick(collector_factory()))
     while True:
         record = yield
         if record is None:
@@ -71,8 +72,8 @@ def split_by_person(collector):
     yield sorted((full_name, tuple(collector.send(None))) for full_name, collector in persons.items())
 
 
-def filter_dates(start, end, collector):
-    collector = send(collector())
+def filter_dates(start, end, collector_factory):
+    collector = kick(collector_factory())
     while True:
         record = yield
         if record is None:
@@ -83,10 +84,34 @@ def filter_dates(start, end, collector):
     yield collector.send(None)
 
 
-def main():
-    for x in parse(open('sample.xml')):
-        print(x)
+DATE_FORMAT = '%d-%m-%Y'
+
+
+def main(args):
+    collector_factory = collect_by_day
+    if args.split_by_person:
+        collector_factory = partial(split_by_person, collector_factory)
+    if args.filter_by_interval:
+        convert = lambda s: datetime.strptime(s, DATE_FORMAT).date()
+        start, end = map(convert, args.filter_by_interval[0].split('..'))
+        collector_factory = partial(filter_dates, start, end, collector_factory)
+    collector = kick(collector_factory())
+
+    with open(args.path, 'rb') as stream:
+        for record in parse(stream):
+            collector.send(record)
+
+    import pprint
+    pprint.pprint(collector.send(None))
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description='Calculate amout of time from xml.')
+    parser.add_argument('path', type=str, help='Path to xml file')
+    parser.add_argument('--split-by-person', action='store_true', help='Group time by person')
+    parser.add_argument('--filter-by-interval', nargs='+', help='Use only this inverval in computation. '
+        f'Format \'{DATE_FORMAT.replace("%", "%%")}..{DATE_FORMAT.replace("%", "%%")}\'')
+
+    args = parser.parse_args()
+    main(args)
