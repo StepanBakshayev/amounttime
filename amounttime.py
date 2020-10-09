@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, date
 from collections import defaultdict
 from functools import partial
 import pprint
+from itertools import chain
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,12 @@ def parse(file):
     lane = ()
     start = None
     end = None
-    for (event, element) in ElementTree.iterparse(file, events=('start', 'end',)):
+    parser = ElementTree.iterparse(file, events=('start', 'end',))
+    nothing = (None, None)
+    event, root = next(parser, nothing)
+    if (event, root) == nothing:
+        return
+    for (event, element) in chain(((event, root),), parser):
         if event == 'start':
             lane += element.tag,
             if lane not in lanes:
@@ -44,6 +50,7 @@ def parse(file):
                 yield Record(element.attrib['full_name'], start, end)
                 start = None
                 end = None
+                root.remove(element)
 
 
 def collect_by_day():

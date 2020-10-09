@@ -180,4 +180,54 @@ Exit status:                                 0       0
 Для начала я хочу узнать сколько в памяти занимают чисто результат - это список, редкие строки, частые даты в картежах.
 На помощь придет вычитывание файла и ``eval``.
 В пике у конкурирующих реализаций получилось за 2 ГБ (по данным того же time 2610976 kbytes). Но при комбинации ``gc.collect(); input()`` htop на моменте ожидания ввода в программе рапортует в колонке ``RES`` всё теже 2 ГБ только для pypy, а для python - 280 МБ.
-Странно.
+Странно. Однако есть цель - 280 МБ.
+
+Возвращаемся к ET. Жалко от него отказываться. Есть гипотеза, что ET создает дерево в памяти. Нужно вего лишь избавляться от элементов ``<person>`` своевременно.
+Накатываю изменения:
+
+.. code-block:: diff
+
+    diff --git a/amounttime.py b/amounttime.py
+    index ffa4553..3eeea7e 100755
+    --- a/amounttime.py
+    +++ b/amounttime.py
+    @@ -5,6 +5,7 @@ from datetime import datetime, timedelta, date
+     from collections import defaultdict
+     from functools import partial
+     import pprint
+    +from itertools import chain
+     
+     
+     @dataclass(frozen=True)
+    @@ -25,7 +26,12 @@ def parse(file):
+         lane = ()
+         start = None
+         end = None
+    -    for (event, element) in ElementTree.iterparse(file, events=('start', 'end',)):
+    +    parser = ElementTree.iterparse(file, events=('start', 'end',))
+    +    nothing = (None, None)
+    +    event, root = next(parser, nothing)
+    +    if (event, root) == nothing:
+    +        return
+    +    for (event, element) in chain(((event, root),), parser):
+             if event == 'start':
+                 lane += element.tag,
+                 if lane not in lanes:
+    @@ -44,6 +50,7 @@ def parse(file):
+                     yield Record(element.attrib['full_name'], start, end)
+                     start = None
+                     end = None
+    +                root.remove(element)
+     
+     
+     def collect_by_day():
+
+Запуск ``measure.sh`` даёт:
+
+============================================ ======= =======
+Параметр                                     PyPy    CPython
+============================================ ======= =======
+Maximum resident set size (kbytes):          285640  109556
+============================================ ======= =======
+
+Все! Работа над ошибками завершена.
